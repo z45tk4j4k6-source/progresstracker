@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Progress">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Progress Tracker</title>
+<link rel="apple-touch-icon" id="icon" href="">
+<style>
+:root{--bg:#eef2f1;--panel:#fff;--ink:#14282b;--muted:#5d7275;--track:#d5e0de;--fill:#0f7c7a;--fill2:#3fb6a8;--line:#c3d2cf;--done:#c2571a;--onfill:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a1c;--panel:#152528;--ink:#e6f1ef;--muted:#8fa8a8;--track:#233a3d;--fill:#3fb6a8;--fill2:#7fdcc9;--line:#2c4649;--done:#f0904f;--onfill:#0e1a1c}}
+:root[data-theme="dark"]{--bg:#0e1a1c;--panel:#152528;--ink:#e6f1ef;--muted:#8fa8a8;--track:#233a3d;--fill:#3fb6a8;--fill2:#7fdcc9;--line:#2c4649;--done:#f0904f;--onfill:#0e1a1c}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Avenir Next","Segoe UI",system-ui,sans-serif;line-height:1.4}
+main{max-width:720px;margin:0 auto;padding:16px 16px 48px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px}
+h1{font-family:Georgia,serif;font-size:1.5rem;font-weight:600;margin:0}
+button{font:inherit;font-size:.85rem;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+button.primary{background:var(--fill);border-color:var(--fill);color:var(--onfill);font-weight:600}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%;min-width:0}
+textarea{font-family:ui-monospace,monospace;font-size:12px;height:150px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.top{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.title{font-family:Georgia,serif;font-size:1.15rem;font-weight:600;border-color:transparent;background:transparent;padding:4px 6px;margin-left:-6px}
+.pct{font-family:Georgia,serif;font-size:3.2rem;line-height:1;font-weight:700;white-space:nowrap;color:var(--fill)}
+.pct small{font-size:1.4rem}
+.state{color:var(--muted);font-size:.85rem;margin:8px 0 10px}
+.bar{height:22px;background:var(--track);border-radius:11px;overflow:hidden}
+.fill{height:100%;background:linear-gradient(90deg,var(--fill),var(--fill2));border-radius:11px}
+.tiles{display:flex;gap:6px;margin-top:12px;font-variant-numeric:tabular-nums}
+.tiles div{flex:1;background:var(--bg);border-radius:8px;padding:6px 2px;text-align:center}
+.tiles b{display:block;font-family:Georgia,serif;font-size:1.2rem}
+.tiles span{font-size:.68rem;color:var(--muted)}
+.lbl{font-size:.72rem;color:var(--muted);margin:10px 0 3px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.row button{padding:7px 10px}
+.err{color:var(--done);font-size:.8rem}
+.muted{color:var(--muted);font-size:.8rem}
+.done .pct,.done .state{color:var(--done)}.done .fill{background:var(--done)}
+.fast{border-color:var(--fill);border-width:2px}
+.big{width:100%;padding:12px;font-size:1rem;margin-top:12px}
+.seg{display:flex;gap:6px;margin-top:10px}.seg button{flex:1}.seg .on{background:var(--fill);color:var(--onfill);border-color:var(--fill)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<header><h1>Progress</h1><div><button id="io">Export / Import</button> <button class="primary" id="add">+ New</button></div></header>
+
+<section class="card hide" id="form">
+  <div class="lbl">Title (emoji welcome)</div><input id="nt" placeholder="🏃 Marathon training">
+  <div class="lbl">Start</div><input id="ns" type="datetime-local">
+  <div class="seg"><button id="m1" class="on">End date</button><button id="m2">Duration</button></div>
+  <div id="endBox"><div class="lbl">End</div><input id="ne" type="datetime-local"></div>
+  <div id="durBox" class="hide"><div class="lbl">Length</div><div class="grid"><input id="nd" type="number" min="1" value="1" inputmode="decimal"><select id="nu"><option value="60000">minutes</option><option value="3600000">hours</option><option value="86400000" selected>days</option></select></div></div>
+  <div class="err" id="nerr"></div>
+  <div class="row"><button class="primary" id="save">Add</button><button id="cancel">Cancel</button></div>
+</section>
+
+<section class="card hide" id="iop">
+  <b>Backup</b>
+  <p class="muted">Copy this and send it to me to keep your progress when I make changes.</p>
+  <textarea id="ta" aria-label="Backup data"></textarea>
+  <div class="row"><button class="primary" id="copy">Copy</button><button id="share">Share…</button><button id="restore">Restore from box</button><button id="close">Close</button></div>
+  <div class="muted" id="iomsg"></div>
+</section>
+
+<div id="list"></div>
+<p class="muted" style="text-align:center">Saved on this device. Open from your home screen icon each time.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id),H=36e5;
+const pad=n=>String(n).padStart(2,'0');
+const toLocal=ms=>{const d=new Date(ms);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const fromLocal=v=>new Date(v).getTime();
+const fmt=ms=>new Date(ms).toLocaleString([],{dateStyle:'medium',timeStyle:'short'});
+function dur(ms){ms=Math.max(0,Math.floor(ms/1000));const d=Math.floor(ms/86400),h=Math.floor(ms%86400/3600),m=Math.floor(ms%3600/60),s=ms%60;return [d&&d+'d',(d||h)&&h+'h',(d||h||m)&&m+'m',s+'s'].filter(Boolean).join(' ')}
+let items=[],mode=1;
+const uid=()=>'i'+Date.now()+Math.random().toString(36).slice(2,6);
+function save(){try{localStorage.setItem('tracker1',JSON.stringify(items))}catch(_){}}
+function mkFast(){const n=Date.now();return{id:'fast',fast:1,idle:1,d:14*H,title:'🍽️ Intermittent fast',s:n,e:n+14*H}}
+function load(){try{const v=JSON.parse(localStorage.getItem('tracker1'));if(Array.isArray(v)&&v.length){items=v;return}}catch(_){}items=[mkFast()];save()}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(_){}
+function build(){
+  const L=$('list');L.innerHTML='';
+  items.slice().sort((a,b)=>(b.fast?1:0)-(a.fast?1:0)).forEach(it=>{
+    const c=document.createElement('section');c.className='card'+(it.fast?' fast':'');c.dataset.id=it.id;
+    c.innerHTML=`<div class="top"><input class="title" aria-label="Title"><div class="pct"><span class="p">0</span><small>%</small></div></div>
+    <div class="state"></div>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="fill" style="width:0"></div></div>
+    <div class="tiles"><div><b class="ud">0</b><span>days</span></div><div><b class="uh">00</b><span>hours</span></div><div><b class="um">00</b><span>min</span></div><div><b class="us">00</b><span>sec left</span></div></div>
+    ${it.fast?'<button class="primary big go">▶ Start fast now</button>':''}
+    <div class="grid dates"><div><div class="lbl">Start</div><input type="datetime-local" class="s"></div><div><div class="lbl">End</div><input type="datetime-local" class="e"></div></div>
+    <div class="row"><span class="muted lab">End:</span><button data-a="-3600000">−1h</button><button data-a="-900000">−15m</button><button data-a="900000">+15m</button><button data-a="3600000">+1h</button>${it.fast?'<button class="rst" style="margin-left:auto">Reset</button>':'<button class="del" style="margin-left:auto">Delete</button>'}</div>
+    <div class="err" role="alert"></div>`;
+    const q=k=>c.querySelector(k);
+    q('.title').value=it.title;q('.s').value=toLocal(it.s);q('.e').value=toLocal(it.e);
+    q('.title').oninput=e=>{it.title=e.target.value;save()};
+    q('.s').onchange=e=>{const v=fromLocal(e.target.value);if(!isNaN(v)){it.s=v;save();tick()}};
+    q('.e').onchange=e=>{const v=fromLocal(e.target.value);if(!isNaN(v)){it.e=v;save();tick()}};
+    c.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{if(it.idle)it.d=Math.max(9e5,it.d+ +b.dataset.a);else it.e+=+b.dataset.a;q('.e').value=toLocal(it.e);save();tick()});
+    if(it.fast){q('.go').onclick=()=>{const d=it.idle?it.d:(it.e-it.s>0?it.e-it.s:14*H);it.d=d;it.idle=0;it.s=Date.now();it.e=it.s+d;q('.s').value=toLocal(it.s);q('.e').value=toLocal(it.e);save();tick()};q('.rst').onclick=()=>{if(!it.idle&&!confirm('Reset the fast?'))return;if(!it.idle&&it.e>it.s)it.d=it.e-it.s;it.idle=1;save();tick()}}
+    else q('.del').onclick=()=>{if(confirm('Delete "'+(it.title||'Untitled')+'"?')){items=items.filter(x=>x!==it);save();build();tick()}};
+    L.appendChild(c);
+  });
+}
+function tick(){
+  const now=Date.now();
+  items.forEach(it=>{
+    const c=document.querySelector(`[data-id="${it.id}"]`);if(!c)return;
+    const q=k=>c.querySelector(k);
+    if(it.fast){q('.dates').style.display=it.idle?'none':'';q('.rst').style.display=it.idle?'none':'';q('.lab').textContent=it.idle?'Length:':'End:';q('.go').textContent=it.idle?'▶ Start fast now':'↻ Restart fast'}
+    if(it.idle){q('.p').textContent='0';q('.fill').style.width='0%';q('.bar').setAttribute('aria-valuenow','0');q('.err').textContent='';const z=Math.floor(it.d/1000);q('.ud').textContent=Math.floor(z/86400);q('.uh').textContent=pad(Math.floor(z%86400/3600));q('.um').textContent=pad(Math.floor(z%3600/60));q('.us').textContent=pad(z%60);q('.state').textContent='Ready · '+dur(it.d)+' fast. Tap Start when you begin.';c.classList.remove('done');return}
+    if(!(it.e>it.s)){q('.err').textContent='End must be after start.';return}
+    q('.err').textContent='';
+    const total=it.e-it.s,el=Math.min(Math.max(now-it.s,0),total),left=Math.max(it.e-now,0),p=el/total*100;
+    q('.p').textContent=p.toFixed(p>=100?0:1);
+    q('.fill').style.width=p+'%';
+    q('.bar').setAttribute('aria-valuenow',p.toFixed(1));
+    const cd=Math.floor(left/1000);
+    q('.ud').textContent=Math.floor(cd/86400);q('.uh').textContent=pad(Math.floor(cd%86400/3600));q('.um').textContent=pad(Math.floor(cd%3600/60));q('.us').textContent=pad(cd%60);
+    q('.state').textContent=now<it.s?'Starts in '+dur(it.s-now)+' · '+fmt(it.s)+' → '+fmt(it.e):now>=it.e?'Finished '+dur(now-it.e)+' ago · total '+dur(total):'Elapsed '+dur(el)+' · '+dur(left)+' left · ends '+fmt(it.e);
+    c.classList.toggle('done',now>=it.e);
+  });
+}
+function setMode(m){mode=m;$('m1').classList.toggle('on',m==1);$('m2').classList.toggle('on',m==2);$('endBox').classList.toggle('hide',m!=1);$('durBox').classList.toggle('hide',m!=2)}
+$('m1').onclick=()=>setMode(1);$('m2').onclick=()=>setMode(2);
+$('add').onclick=()=>{$('iop').classList.add('hide');$('form').classList.remove('hide');$('nt').value='';const n=Date.now();$('ns').value=toLocal(n);$('ne').value=toLocal(n+864e5);$('nerr').textContent='';setMode(1);$('nt').focus()};
+$('cancel').onclick=()=>$('form').classList.add('hide');
+$('save').onclick=()=>{
+  const s=fromLocal($('ns').value);if(isNaN(s)){$('nerr').textContent='Pick a start.';return}
+  const e=mode==1?fromLocal($('ne').value):s+(parseFloat($('nd').value)||0)*+$('nu').value;
+  if(isNaN(e)||e<=s){$('nerr').textContent='End must be after start.';return}
+  items.push({id:uid(),title:$('nt').value.trim()||'Untitled',s,e});save();$('form').classList.add('hide');build();tick();
+};
+$('io').onclick=()=>{$('form').classList.add('hide');$('iop').classList.remove('hide');$('ta').value=JSON.stringify({app:'progress-tracker',version:1,exportedAt:new Date().toISOString(),items},null,1);$('iomsg').textContent=''};
+$('close').onclick=()=>$('iop').classList.add('hide');
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('ta').value);$('iomsg').textContent='Copied.'}catch(_){$('ta').select();$('iomsg').textContent='Select all and copy manually.'}};
+$('share').onclick=async()=>{try{await navigator.share({title:'Progress backup',text:$('ta').value})}catch(_){$('iomsg').textContent='Sharing unavailable. Use Copy.'}};
+$('restore').onclick=()=>{try{const v=JSON.parse($('ta').value),a=Array.isArray(v)?v:v.items;if(!Array.isArray(a)||!a.every(x=>x&&typeof x.title=='string'&&x.e>x.s))throw 0;if(!confirm('Replace current data with this backup?'))return;items=a;if(!items.some(x=>x.fast))items.unshift(mkFast());save();build();tick();$('iomsg').textContent='Restored.'}catch(_){$('iomsg').textContent='That is not a valid backup.'}};
+try{const k=document.createElement('canvas');k.width=k.height=180;const x=k.getContext('2d');x.fillStyle='#0f7c7a';x.fillRect(0,0,180,180);x.font='110px serif';x.textAlign='center';x.textBaseline='middle';x.fillText('⏳',90,98);$('icon').href=k.toDataURL('image/png')}catch(_){}
+load();build();tick();setInterval(tick,250);
+</script>
+</body>
+</html>
